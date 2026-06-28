@@ -2,12 +2,12 @@
 算法和网页文件。分开储存。方便更新与维护。
 
 JT/
-├── index.html            # 主界面
+├── index.html        # 程序主界面
 ├── css/
-│   └── style.css         # 样式文件
+│   └── style.css     # 全局样式表
 ├── js/
-│   ├── config.js         # 车型配置、固定口令表
-│   ├── algorithms.js     # 所有算法函数
-│   └── app.js            # 主逻辑（UI交互）
-├── version.json          # 版本号记录
-└── api/                  # （预留）后台接口目录
+│   ├── config.js     # 车型参数、内置口令配置
+│   ├── algorithms.js # 核心算法函数库
+│   └── app.js        # UI交互、页面业务逻辑
+├── version.json      # 版本信息记录文件
+└── api/              # 预留目录，用于存放后台接口脚本
