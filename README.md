@@ -6,7 +6,8 @@ JT/
 ├── index.html        # 程序主界面
 
 ├── css/
-│        └── style.css     # 全局样式表
+
+│                 └── style.css     # 全局样式表
 ├── js/
 │   ├── config.js     # 车型参数、内置口令配置
 │   ├── algorithms.js # 核心算法函数库
