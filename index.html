@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车载工程模式口令生成器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="navbar-content">
+            <div class="navbar-icon">🔐</div>
+            <div class="navbar-title-group">
+                <span class="navbar-title">车载工程模式口令生成器</span>
+                <span class="navbar-subtitle">工具作者:傲慢与偏见   算法提供:久º｜伴º</span>
+            </div>
+        </div>
+    </nav>
+    <div class="toast" id="toast"></div>
+    <div class="main-container">
+        <div class="card" id="carSelectCard">
+            <div class="card-header">
+                <div class="card-header-icon">🚗</div>
+                <span class="card-header-title">选择车型与版本</span>
+                <span class="card-header-badge" id="algoBadge" style="display:none;"></span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="carModelSelect">车型</label>
+                <select class="form-select" id="carModelSelect">
+                    <option value="">-- 请选择车型 --</option>
+                </select>
+            </div>
+            <div class="form-group" id="versionGroup" style="display:none;">
+                <label class="form-label">版本</label>
+                <div class="version-buttons" id="versionButtons"></div>
+            </div>
+            <div class="form-group" id="serialNumberGroup" style="display:none;">
+                <label class="form-label" id="serialLabel" for="serialNumberInput">序列号（后6位）</label>
+                <input type="text" class="form-input" id="serialNumberInput" placeholder="请输入序列号后6位数字" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+                <div class="form-hint">输入6位数自动生成</div>
+            </div>
+        </div>
+        <div class="card" id="resultCard" style="display:none;">
+            <div class="card-header">
+                <div class="card-header-icon">📋</div>
+                <span class="card-header-title">生成结果</span>
+                <span class="card-header-badge active" id="resultBadge" style="display:none;">当前有效</span>
+            </div>
+            <div class="result-area" id="resultArea"></div>
+            <div class="countdown-bar" id="countdownBar" style="display:none;">
+                <span class="countdown-dot"></span>
+                <span>下次更新倒计时：</span>
+                <span class="timer" id="countdownTimer">--:--:--</span>
+            </div>
+        </div>
+    </div>
+    <script src="js/config.js"></script>
+    <script src="js/algorithms.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
