@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JT 后台管理</title>
+  <style>
+    /* 复用之前手机端样式 */
+    :root { --bg: #f5f6f8; --card: #fff; --accent: #4f6ef6; }
+    body { font-family: system-ui; background: var(--bg); }
+    .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg,#667eea,#764ba2); }
+    .login-card { background: #fff; border-radius: 16px; padding: 32px; width: 90%; max-width: 360px; text-align: center; }
+    .login-card input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; }
+    .btn { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-weight: bold; margin-top: 8px; cursor: pointer; }
+    .admin-page { display: none; padding: 20px; }
+  </style>
+</head>
+<body>
+<div class="login-page" id="loginPage">
+  <div class="login-card">
+    <h2>🔐 JT 后台管理</h2>
+    <input id="username" placeholder="用户名" value="admin">
+    <input id="password" type="password" placeholder="密码" value="admin123">
+    <button class="btn" onclick="doLogin()">登 录</button>
+  </div>
+</div>
+<div class="admin-page" id="adminPage">
+  <h1>欢迎，管理员</h1>
+  <p>车型管理等功能开发中...</p>
+  <button class="btn" onclick="doLogout()">退出</button>
+</div>
+<script>
+let token = localStorage.getItem('token');
+async function doLogin() {
+  const u = document.getElementById('username').value;
+  const p = document.getElementById('password').value;
+  const res = await fetch('/api/auth/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({username: u, password: p})
+  });
+  const data = await res.json();
+  if (data.token) {
+    localStorage.setItem('token', data.token);
+    token = data.token;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('adminPage').style.display = 'block';
+  } else alert('登录失败');
+}
+function doLogout() {
+  localStorage.removeItem('token');
+  token = null;
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('adminPage').style.display = 'none';
+}
+if (token) document.getElementById('loginPage').style.display = 'none', document.getElementById('adminPage').style.display = 'block';
+</script>
+</body>
+</html>
