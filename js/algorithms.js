@@ -1,181 +1,314 @@
-// ==================== 固定口令配置表 ====================
-const fixedPasswords = {
-    traveler: {
-        '0406': '*#20230730#*'
+// ==================== 辅助函数 ====================
+function getFixedPassword(carModel, version) {
+    if (fixedPasswords[carModel] && fixedPasswords[carModel][version]) {
+        return fixedPasswords[carModel][version];
+    }
+    return '*#20230730#*';
+}
+
+function calculateSerialNumberDailyPassword(year, month, date) {
+    const yymmdd = parseInt(`${year.toString().slice(-2)}${month}${date}`, 10);
+    const lastDigit = yymmdd % 10;
+    const baseValues = [213518, 658035, 235657, 567534, 647825, 234700, 127347, 875634, 345678, 982345];
+    const baseValue = baseValues[lastDigit] || 213518;
+    const adbFull = yymmdd + baseValue;
+    return (adbFull % 1000000).toString().padStart(6, '0');
+}
+
+function calculateHu8DailyPassword(year, month, date) {
+    const yymmdd = parseInt(`${year.toString().slice(-2)}${month}${date}`, 10);
+    const lastDigit = yymmdd % 10;
+    const baseValues = [213518, 658035, 235657, 567534, 647825, 234700, 127347, 648924, 733782, 553456];
+    const baseValue = baseValues[lastDigit] || 213518;
+    const adbFull = yymmdd + baseValue;
+    return (adbFull % 1000000).toString().padStart(6, '0');
+}
+
+function getCurrentTimeParams() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const date = String(now.getDate()).padStart(2, '0');
+    const hours = now.getHours();
+    const hoursStr = String(hours).padStart(2, '0');
+    const yearShort = String(year).slice(-2);
+    const dateTimeNum = parseInt(`${yearShort}${month}${date}${hoursStr}`, 10);
+    const mmddhh = parseInt(`${month}${date}${hoursStr}`, 10);
+    return { year, month, date, hours, dateTimeNum, mmddhh, now };
+}
+
+// ==================== 算法实现 ====================
+const algorithms = {
+    fixed: {
+        countdown: 'none',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { carModel, version } = params;
+            return {
+                carPassword: getFixedPassword(carModel, version),
+                adbPassword: '无'
+            };
+        }
     },
-    dasheng: {
-        'fixed': '*#20220730#*'
+    dashengFixed: {
+        countdown: 'none',
+        showSerialNumberInput: false,
+        calculate: function() {
+            return { 
+                carPassword1: '*#20220730#*', 
+                carPassword2: '*#12040310#*' 
+            };
+        }
     },
-    x70plus: {
-        'unknown': '*#20201030#*'
+    serialNumber: {
+        countdown: 'none',
+        showSerialNumberInput: true,
+        calculate: function(params) {
+            const { serialNumber } = params;
+            if (serialNumber && serialNumber.length >= 6) {
+                const snLastSix = serialNumber.slice(-6);
+                const adbFull = 802018 * parseInt(snLastSix, 10);
+                return {
+                    carPassword: '*#20230730#*',
+                    adbPassword: (adbFull % 1000000).toString().padStart(6, '0')
+                };
+            } else {
+                return {
+                    carPassword: '*#20230730#*',
+                    adbPassword: 'xxxxxx'
+                };
+            }
+        }
     },
-    x90plus: {
-        '040x': '*#20230730#*',
-        'unknown': '*#20201030#*'
+    serialNumberDaily: {
+        countdown: 'daily',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { year, month, date } = params;
+            const adbPassword = calculateSerialNumberDailyPassword(year, month, date);
+            return {
+                carPassword: '*#20230730#*',
+                adbPassword: adbPassword
+            };
+        }
     },
-    x95: {
-        'unknown': '*#20201030#*'
+    hu8Daily: {
+        countdown: 'daily',
+        showSerialNumberInput: true,
+        useVin: true,
+        calculate: function(params) {
+            const { year, month, date, serialNumber } = params;
+            const adbPassword = calculateHu8DailyPassword(year, month, date);
+            let upgradePassword = '请输入VIN';
+            if (serialNumber && serialNumber.length >= 6) {
+                const vinLast6 = serialNumber.slice(-6);
+                let vinNumStr = '';
+                for (let ch of vinLast6) {
+                    if (/[0-9]/.test(ch)) vinNumStr += ch;
+                    else vinNumStr += '0';
+                }
+                const vinNum = parseInt(vinNumStr, 10);
+                const base = vinNum + 123456;
+                const yymmdd = parseInt(`${year.toString().slice(-2)}${month}${date}`, 10);
+                const result = (base * yymmdd) % 1000000;
+                upgradePassword = result.toString().padStart(6, '0');
+            }
+            return {
+                carPassword: '设置-系统-空白处点8下进入',
+                adbPassword: adbPassword,
+                upgradeEntry: '设置-系统升级-当前已是最新版点8下',
+                upgradePassword: upgradePassword
+            };
+        }
     },
-    shanhal7: {
-        'unknown': '*#20201030#*'
+    ruihuRandomCode: {
+        countdown: 'none',
+        showSerialNumberInput: true,
+        useVin: false,
+        labelText: '随机码',
+        placeholder: '请输入随机码',
+        calculate: function(params) {
+            const { serialNumber } = params;
+            if (serialNumber && serialNumber.length > 0) {
+                const insertChars = ['A','b','C','d','E','f','G','h','I','j','K','l'];
+                let result = '';
+                for (let i = 0; i < serialNumber.length; i++) {
+                    result += serialNumber[i];
+                    if (i < insertChars.length) {
+                        result += insertChars[i];
+                    }
+                }
+                result += '@@';
+                return {
+                    carPassword: '设置-系统-空白处点8下进入',
+                    adbPassword: result
+                };
+            } else {
+                return {
+                    carPassword: '设置-系统-空白处点8下进入',
+                    adbPassword: '请输入随机码'
+                };
+            }
+        }
     },
-    shanhal9: {
-        'unknown': '*#20201030#*'
+    ruihu8proPre3: {
+        countdown: 'daily',
+        showSerialNumberInput: true,
+        useVin: true,
+        calculate: function(params) {
+            const { year, month, date, serialNumber } = params;
+            const systemPassword = '1q2w3e';
+            let upgradePassword = '请输入VIN';
+            if (serialNumber && serialNumber.length >= 6) {
+                const vinLast6 = serialNumber.slice(-6);
+                let vinNumStr = '';
+                for (let ch of vinLast6) {
+                    if (/[0-9]/.test(ch)) vinNumStr += ch;
+                    else vinNumStr += '0';
+                }
+                const vinNum = parseInt(vinNumStr, 10);
+                const base = vinNum + 123456;
+                const yymmdd = parseInt(`${year.toString().slice(-2)}${month}${date}`, 10);
+                const result = (base * yymmdd) % 1000000;
+                upgradePassword = result.toString().padStart(6, '0');
+            }
+            return {
+                carPassword: '设置-系统-空白处点8下进入',
+                systemPassword: systemPassword,
+                upgradePassword: upgradePassword
+            };
+        }
+    },
+    ruihu8proPost3: {
+        countdown: 'daily',
+        showSerialNumberInput: true,
+        useVin: true,
+        calculate: function(params) {
+            const { year, month, date, serialNumber } = params;
+            const systemPassword = calculateSerialNumberDailyPassword(year, month, date);
+            let upgradePassword = '请输入VIN';
+            if (serialNumber && serialNumber.length >= 6) {
+                const vinLast6 = serialNumber.slice(-6);
+                let vinNumStr = '';
+                for (let ch of vinLast6) {
+                    if (/[0-9]/.test(ch)) vinNumStr += ch;
+                    else vinNumStr += '0';
+                }
+                const vinNum = parseInt(vinNumStr, 10);
+                const base = vinNum + 123456;
+                const yymmdd = parseInt(`${year.toString().slice(-2)}${month}${date}`, 10);
+                const result = (base * yymmdd) % 1000000;
+                upgradePassword = result.toString().padStart(6, '0');
+            }
+            return {
+                carPassword: '设置-系统-空白处点8下进入',
+                systemPassword: systemPassword,
+                upgradePassword: upgradePassword
+            };
+        }
+    },
+    dynamic250110: {
+        countdown: 'hourly',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { dateTimeNum, hours } = params;
+            const adbFull = 250110 * dateTimeNum;
+            const carBase = 250110 * dateTimeNum;
+            const carFull = carBase - hours;
+            return {
+                carPassword: `*#${(carFull % 1000000).toString().padStart(6, '0')}#*`,
+                adbPassword: (adbFull % 1000000).toString().padStart(6, '0')
+            };
+        }
+    },
+    dynamic250930: {
+        countdown: 'hourly',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { dateTimeNum, hours } = params;
+            const adbFull = 250930 * dateTimeNum;
+            const carBase = 250930 * dateTimeNum;
+            const carFull = carBase - hours;
+            return {
+                carPassword: `*#${(carFull % 1000000).toString().padStart(6, '0')}#*`,
+                adbPassword: (adbFull % 1000000).toString().padStart(6, '0')
+            };
+        }
+    },
+    dynamic240910: {
+        countdown: 'hourly',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { mmddhh, hours } = params;
+            const adbFull = 240910 * mmddhh;
+            const carFull = (240910 * mmddhh) - hours;
+            return {
+                carPassword: `*#${(carFull % 1000000).toString().padStart(6, '0')}#*`,
+                adbPassword: (adbFull % 1000000).toString().padStart(6, '0')
+            };
+        }
+    },
+    ziyouzhe000402: {
+        countdown: 'none',
+        showSerialNumberInput: false,
+        calculate: function() {
+            return { carPassword: '*#20241130#*', adbPassword: '无' };
+        }
+    },
+    dynamic231030: {
+        countdown: 'hourly',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { dateTimeNum, hours } = params;
+            const adbFull = 231030 * dateTimeNum;
+            const carFull = adbFull - hours;
+            return {
+                carPassword: `*#${(carFull % 1000000).toString().padStart(6, '0')}#*`,
+                adbPassword: (adbFull % 1000000).toString().padStart(6, '0')
+            };
+        }
+    },
+    dynamic230830: {
+        countdown: 'hourly',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { dateTimeNum, hours } = params;
+            const adbFull = 230830 * dateTimeNum;
+            const carFull = (230830 * dateTimeNum) - hours;
+            return {
+                carPassword: `*#${(carFull % 1000000).toString().padStart(6, '0')}#*`,
+                adbPassword: (adbFull % 1000000).toString().padStart(6, '0')
+            };
+        }
+    },
+    otherCars: {
+        countdown: 'hourly',
+        showSerialNumberInput: false,
+        calculate: function(params) {
+            const { carModel, version, year, month, date, dateTimeNum, hours, mmddhh } = params;
+            const passwords = [];
+            if (carModel === 'ziyouzhe' && version === '11010x') {
+                const adbPwd = (240910 * mmddhh) % 1000000;
+                const carPwd = ((240910 * mmddhh) - hours) % 1000000;
+                passwords.push(`*#${carPwd.toString().padStart(6, '0')}#*`);
+                passwords.push(adbPwd.toString().padStart(6, '0'));
+                passwords.push('--');
+            } else if (carModel === 'shanhal7') {
+                const p3 = (231030 * dateTimeNum) - hours;
+                passwords.push('*#20201030#*');
+                passwords.push(calculateSerialNumberDailyPassword(year, month, date));
+                passwords.push(`*#${(p3 % 1000000).toString().padStart(6, '0')}#*`);
+            } else {
+                const p3 = (231030 * dateTimeNum) - hours;
+                passwords.push('*#20201030#*');
+                passwords.push('*#20230730#*');
+                passwords.push(`*#${(p3 % 1000000).toString().padStart(6, '0')}#*`);
+            }
+            return { passwords: passwords };
+        }
     }
 };
 
-// ==================== 车型配置 ====================
-const carModels = {
-    traveler: {
-        name: '捷途旅行者/山海T2',
-        versions: ['00x', '0406', '0407', 'other', 'cdm'],
-        versionNames: {
-            '00x': '00.08及以下',
-            '0406': '4.06及以下',
-            '0407': '4.07以上',
-            'other': '其他',
-            'cdm': '26款'
-        },
-        algorithms: {
-            '00x': 'serialNumber',
-            '0406': 'dynamic230830',
-            '0407': 'dynamic250110',
-            'other': 'serialNumberDaily',
-            'cdm': 'dynamic250930'
-        },
-        encrypted: {
-            '00x': false,
-            '0406': false,
-            '0407': false,
-            'other': false,
-            'cdm': false
-        },
-        defaultVersion: '0407'
-    },
-    ziyouzhe: {
-        name: '自由者/山海T1',
-        versions: ['11010x', '01010x', '000402'],
-        versionNames: {
-            '11010x': '11.01.04及以上',
-            '01010x': '01.01.0x',
-            '000402': '00.04.02'
-        },
-        algorithms: {
-            '11010x': 'dynamic240910',
-            '01010x': 'dynamic240910',
-            '000402': 'ziyouzhe000402'
-        },
-        encrypted: {
-            '11010x': false,
-            '01010x': false,
-            '000402': false
-        },
-        defaultVersion: '11010x'
-    },
-    shanhal7: {
-        name: '山海L7/Plus/T9',
-        versions: ['os10201', 'os1201000'],
-        versionNames: {
-            'os10201': 'OS1-02.01',
-            'os1201000': 'OS1_20.10.00'
-        },
-        algorithms: {
-            'os10201': 'otherCars',
-            'os1201000': 'otherCars'
-        },
-        encrypted: {
-            'os10201': false,
-            'os1201000': false
-        },
-        defaultVersion: 'os1201000'
-    },
-    shanhal9: {
-        name: '山海L9',
-        versions: ['unknown'],
-        versionNames: { 'unknown': '其他版本' },
-        algorithms: { 'unknown': 'otherCars' },
-        encrypted: { 'unknown': false },
-        defaultVersion: 'unknown'
-    },
-    hu8: {
-        name: '虎8/8L',
-        versions: ['unknown', 'latest'],
-        versionNames: { 'unknown': '其他版本', 'latest': '最新版本' },
-        algorithms: { 'unknown': 'hu8Daily', 'latest': 'ruihuRandomCode' },
-        encrypted: { 'unknown': false, 'latest': false },
-        defaultVersion: 'unknown'
-    },
-    ruihu9x: {
-        name: '瑞虎9x',
-        versions: ['unknown', 'latest'],
-        versionNames: { 'unknown': '其他版本', 'latest': '最新版本' },
-        algorithms: { 'unknown': 'hu8Daily', 'latest': 'ruihuRandomCode' },
-        encrypted: { 'unknown': false, 'latest': false },
-        defaultVersion: 'unknown'
-    },
-    ruihu8pro: {
-        name: '瑞虎8PRO冠军版',
-        versions: ['pre3', 'post3', 'latest'],
-        versionNames: {
-            'pre3': '2.0',
-            'post3': '3.0及以上',
-            'latest': '最新版本'
-        },
-        algorithms: {
-            'pre3': 'ruihu8proPre3',
-            'post3': 'ruihu8proPost3',
-            'latest': 'ruihuRandomCode'
-        },
-        encrypted: {
-            'pre3': false,
-            'post3': false,
-            'latest': false
-        },
-        defaultVersion: 'post3'
-    },
-    x70plus: {
-        name: 'X70Plus/L/Pro/CDM',
-        versions: ['unknown'],
-        versionNames: { 'unknown': '00.01.0x' },
-        algorithms: { 'unknown': 'otherCars' },
-        encrypted: { 'unknown': false },
-        defaultVersion: 'unknown'
-    },
-    x70l: {
-        name: '捷途X70L',
-        versions: ['26'],
-        versionNames: { '26': '26款' },
-        algorithms: { '26': 'serialNumber' },
-        encrypted: { '26': false },
-        defaultVersion: '26'
-    },
-    x90plus: {
-        name: 'X90/Plus/Pro/CDM',
-        versions: ['040x', 'unknown'],
-        versionNames: { '040x': '04.0x', 'unknown': '其他版本' },
-        algorithms: { '040x': 'fixed', 'unknown': 'otherCars' },
-        encrypted: { '040x': false, 'unknown': false },
-        defaultVersion: '040x'
-    },
-    x95: {
-        name: 'X95',
-        versions: ['unknown'],
-        versionNames: { 'unknown': '其他版本' },
-        algorithms: { 'unknown': 'otherCars' },
-        encrypted: { 'unknown': false },
-        defaultVersion: 'unknown'
-    },
-    dasheng: {
-        name: '捷途大圣',
-        versions: ['fixed'],
-        versionNames: { 'fixed': '固定口令' },
-        algorithms: { 'fixed': 'dashengFixed' },
-        encrypted: { 'fixed': false },
-        defaultVersion: 'fixed'
-    }
-};
-
-// 如果使用模块化 (Node.js) 则导出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { fixedPasswords, carModels };
+    module.exports = { algorithms, getCurrentTimeParams, calculateSerialNumberDailyPassword, calculateHu8DailyPassword };
 }
